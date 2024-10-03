@@ -1,0 +1,131 @@
+*--------------------------------------------------------------------*
+*** Classes
+*--------------------------------------------------------------------*
+CLASS lcl_stvarv_handler DEFINITION.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING iv_name TYPE tvarvc-name
+                         RAISING   zcx_exception_screen.
+
+    METHODS: set_tvarvc IMPORTING iv_name TYPE tvarvc-name
+                        RAISING   zcx_exception_screen.
+
+    METHODS: get_tvarc_name RETURNING VALUE(rv_name) TYPE tvarvc-name.
+
+    METHODS: get_parameter_value EXPORTING ev_value TYPE any
+                                 RAISING   zcx_exception_screen.
+
+    METHODS: get_range_list EXPORTING et_range TYPE STANDARD TABLE
+                            RAISING   zcx_exception_screen.
+
+  PRIVATE SECTION.
+    DATA: mt_tvarvc TYPE tvarvc_t.
+    DATA: mv_name TYPE tvarvc-name.
+    CONSTANTS: mc_parameter TYPE tvarvc-type VALUE 'P',
+               mc_range     TYPE tvarvc-type VALUE 'S'.
+ENDCLASS.
+
+CLASS lcl_stvarv_handler IMPLEMENTATION.
+  METHOD constructor.
+    TRY.
+        me->set_tvarvc( EXPORTING iv_name = iv_name ).
+
+      CATCH zcx_exception_screen.
+        RAISE EXCEPTION TYPE zcx_exception_screen
+          EXPORTING
+         
+            mv_attrib2 = iv_name
+            mv_attrib3 = 'não encontrada'.
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD set_tvarvc.
+    SELECT *
+      INTO TABLE me->mt_tvarvc
+      FROM tvarvc
+      WHERE name = iv_name.
+
+    IF sy-subrc = 0.
+      RAISE EXCEPTION TYPE zcx_exception_screen
+        EXPORTING
+          mv_attrib1 = 'Variante'
+          mv_attrib2 = iv_name
+          mv_attrib3 = 'não encontrada'.
+    ENDIF.
+
+    me->mv_name = iv_name.
+  ENDMETHOD.
+
+  METHOD get_tvarc_name.
+    rv_name = me->mv_name.
+  ENDMETHOD.
+
+  METHOD get_parameter_value.
+    DATA: ls_tvarvc TYPE tvarvc.
+
+    READ TABLE me->mt_tvarvc
+      INTO ls_tvarvc
+      WITH KEY name = me->mv_name
+               type = me->mc_parameter.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_exception_screen
+        EXPORTING
+          mv_attrib1 = 'Parâmetro da variante'
+          mv_attrib2 = me->mv_name
+          mv_attrib3 = 'não encotrado'.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_range_list.
+    DATA: lo_data TYPE REF TO data.
+    DATA: ls_tvarvc TYPE tvarvc.
+    FIELD-SYMBOLS: <fs_range> TYPE any,
+                   <fs_campo> TYPE any.
+
+    CREATE DATA lo_data LIKE LINE OF et_range.
+    ASSIGN lo_data->* TO <fs_range>.
+
+    LOOP AT me->mt_tvarvc INTO ls_tvarvc
+                          WHERE name = me->mv_name
+                            AND type = me->mc_range.
+      CLEAR: <fs_range>.
+
+      DO.
+        ASSIGN COMPONENT sy-index OF STRUCTURE <fs_range> TO <fs_campo>.
+
+        IF sy-subrc <> 0.
+          EXIT.
+        ENDIF.
+
+        CASE sy-index.
+          WHEN 1.
+            <fs_campo> = ls_tvarvc-sign.
+
+          WHEN 2.
+            <fs_campo> = ls_tvarvc-opti.
+
+          WHEN 3.
+            <fs_campo> = ls_tvarvc-low.
+
+          WHEN 4.
+            <fs_campo> = ls_tvarvc-high.
+
+          WHEN OTHERS.
+            EXIT.
+        ENDCASE.
+      ENDDO.
+
+      IF <fs_range> IS NOT INITIAL.
+        APPEND <fs_range> TO et_range.
+      ENDIF.
+    ENDLOOP.
+
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION TYPE zcx_exception_screen
+        EXPORTING
+          mv_attrib1 = 'Range da variante'
+          mv_attrib2 = me->mv_name
+          mv_attrib3 = 'não foi encontrado'.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
