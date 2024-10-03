@@ -1,0 +1,100 @@
+*--------------------------------------------------------------------*
+*** Classes de exceção
+*--------------------------------------------------------------------*
+CLASS zcx_exception_screen DEFINITION
+                           INHERITING FROM cx_static_check.
+  PUBLIC SECTION.
+    INTERFACES: if_t100_message.
+
+    METHODS: constructor IMPORTING textid	    TYPE        scx_t100key OPTIONAL
+                                   previous   TYPE REF TO cx_root     OPTIONAL
+                                   mv_attrib1 TYPE        c           OPTIONAL
+                                   mv_attrib2 TYPE        c           OPTIONAL
+                                   mv_attrib3 TYPE        c           OPTIONAL
+                                   mv_attrib4 TYPE        c           OPTIONAL.
+
+    METHODS: get_msgid RETURNING VALUE(rv_msgid) TYPE symsgid.
+
+    METHODS: get_msgno RETURNING VALUE(rv_msgno) TYPE msgno.
+
+    METHODS: get_atrib1 RETURNING VALUE(rv_atrib) TYPE symsgv.
+
+    METHODS: get_atrib2 RETURNING VALUE(rv_atrib) TYPE symsgv.
+
+    METHODS: get_atrib3 RETURNING VALUE(rv_atrib) TYPE symsgv.
+
+    METHODS: get_atrib4 RETURNING VALUE(rv_atrib) TYPE symsgv.
+
+  PROTECTED SECTION.
+    DATA: mv_attrib1 TYPE scx_attrname,
+          mv_attrib2 TYPE scx_attrname,
+          mv_attrib3 TYPE scx_attrname,
+          mv_attrib4 TYPE scx_attrname.
+ENDCLASS.
+
+CLASS zcx_exception_screen IMPLEMENTATION.
+  METHOD constructor.
+    super->constructor( EXPORTING previous = previous ).
+
+    me->mv_attrib1 = mv_attrib1.
+    me->mv_attrib2 = mv_attrib2.
+    me->mv_attrib3 = mv_attrib3.
+    me->mv_attrib4 = mv_attrib4.
+
+    CLEAR: me->textid.
+
+    IF textid IS INITIAL AND me->if_t100_message~t100key IS INITIAL.
+      if_t100_message~t100key = if_t100_message=>default_textid.
+    ELSE.
+      if_t100_message~t100key = textid.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_msgid.
+    rv_msgid = if_t100_message~t100key-msgid.
+  ENDMETHOD.
+
+  METHOD get_msgno.
+    rv_msgno = if_t100_message~t100key-msgno.
+  ENDMETHOD.
+
+  METHOD get_atrib1.
+    FIELD-SYMBOLS <lv_attr> TYPE any.
+
+    ASSIGN me->(if_t100_message~t100key-attr1) TO <lv_attr>.
+
+    IF <lv_attr> IS ASSIGNED.
+      WRITE <lv_attr> TO rv_atrib.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_atrib2.
+    FIELD-SYMBOLS <lv_attr> TYPE any.
+
+    ASSIGN me->(if_t100_message~t100key-attr2) TO <lv_attr>.
+
+    IF <lv_attr> IS ASSIGNED.
+      WRITE <lv_attr> TO rv_atrib.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_atrib3.
+    FIELD-SYMBOLS <lv_attr> TYPE any.
+
+    ASSIGN me->(if_t100_message~t100key-attr3) TO <lv_attr>.
+
+    IF <lv_attr> IS ASSIGNED.
+      WRITE <lv_attr> TO rv_atrib.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_atrib4.
+    FIELD-SYMBOLS <lv_attr> TYPE any.
+
+    ASSIGN me->(if_t100_message~t100key-attr4) TO <lv_attr>.
+
+    IF <lv_attr> IS ASSIGNED.
+      WRITE <lv_attr> TO rv_atrib.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
