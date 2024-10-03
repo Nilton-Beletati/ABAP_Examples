@@ -1,0 +1,312 @@
+CLASS lcl_log_execution DEFINITION.
+  PUBLIC SECTION.
+    METHODS: constructor IMPORTING  iv_object     TYPE balobj-object
+                                    iv_subobject  TYPE balsub-subobject
+                                    iv_ext_number TYPE balnrext OPTIONAL
+                         EXCEPTIONS object_not_found
+                                    subobject_not_found
+                                    error_creating_log.
+
+    METHODS: get_object RETURNING VALUE(rv_object) TYPE balobj-object.
+
+    METHODS: get_subobject RETURNING VALUE(rv_subobject) TYPE balsub-subobject.
+
+    METHODS: get_external_number RETURNING VALUE(rv_number) TYPE balnrext.
+
+    METHODS: get_log_handle RETURNING VALUE(rv_handle) TYPE balloghndl.
+
+    METHODS: add_free_log_message IMPORTING  iv_msgty     TYPE sy-msgty
+                                             iv_probclass TYPE balprobcl
+                                             iv_text      TYPE c
+                                  EXCEPTIONS error_adding_log.
+
+    METHODS: add_success_message IMPORTING  iv_probclass TYPE balprobcl DEFAULT '1'
+                                            iv_text      TYPE c
+                                 EXCEPTIONS error_adding_log.
+
+    METHODS: add_warning_message IMPORTING  iv_probclass TYPE balprobcl DEFAULT '1'
+                                            iv_text      TYPE c
+                                 EXCEPTIONS error_adding_log.
+
+    METHODS: add_information_message IMPORTING  iv_probclass TYPE balprobcl DEFAULT '1'
+                                                iv_text      TYPE c
+                                     EXCEPTIONS error_adding_log.
+
+    METHODS: add_error_message IMPORTING  iv_probclass TYPE balprobcl DEFAULT '1'
+                                          iv_text      TYPE c
+                               EXCEPTIONS error_adding_log.
+
+    METHODS: add_abort_message IMPORTING  iv_probclass TYPE balprobcl DEFAULT '1'
+                                          iv_text      TYPE c
+                               EXCEPTIONS error_adding_log.
+
+    METHODS: refresh_log EXCEPTIONS error_refreshing_log.
+
+    METHODS: display_log EXCEPTIONS error_saving_log
+                                    error_displaying_log.
+
+    CONSTANTS: mc_success               TYPE sy-msgty  VALUE 'S',
+               mc_warning               TYPE sy-msgty  VALUE 'W',
+               mc_information           TYPE sy-msgty  VALUE 'I',
+               mc_error                 TYPE sy-msgty  VALUE 'E',
+               mc_abort                 TYPE sy-msgty  VALUE 'A',
+               mc_very_important        TYPE balprobcl VALUE '1',
+               mc_important             TYPE balprobcl VALUE '2',
+               mc_medium                TYPE balprobcl VALUE '3',
+               mc_addtional_information TYPE balprobcl VALUE '4',
+               mc_others                TYPE balprobcl VALUE space.
+
+  PRIVATE SECTION.
+    METHODS: set_object IMPORTING  iv_object TYPE balobj-object
+                        EXCEPTIONS object_not_found.
+
+    METHODS: set_subobject IMPORTING  iv_object    TYPE balobj-object
+                                      iv_subobject TYPE balsub-subobject
+                           EXCEPTIONS subobject_not_found.
+
+    METHODS: create_log_object EXCEPTIONS error_log_creation.
+
+    METHODS: save_log EXCEPTIONS error_saving_log.
+
+    DATA: mv_object     TYPE balobj-object,
+          mv_subobject  TYPE balsub-subobject,
+          mv_ext_number TYPE balnrext,
+          mv_log_handle TYPE balloghndl.
+ENDCLASS.
+
+CLASS lcl_log_execution IMPLEMENTATION.
+  METHOD constructor.
+    me->set_object( EXPORTING  iv_object        = iv_object
+                    EXCEPTIONS object_not_found = 1
+                               OTHERS           = 2 ).
+
+    IF sy-subrc <> 0.
+      RAISE object_not_found.
+    ENDIF.
+
+    me->set_subobject( EXPORTING iv_object            = iv_object
+                                 iv_subobject         = iv_subobject
+                       EXCEPTIONS subobject_not_found = 1
+                                  OTHERS              = 2 ).
+
+    IF sy-subrc <> 0.
+      RAISE subobject_not_found.
+    ENDIF.
+
+    me->create_log_object( EXCEPTIONS error_log_creation = 1
+                           OTHERS             = 2 ).
+
+    IF sy-subrc <> 0.
+      RAISE error_creating_log.
+    ENDIF.
+
+    me->mv_ext_number = iv_ext_number.
+  ENDMETHOD.
+
+  METHOD get_object.
+    rv_object = me->mv_object.
+  ENDMETHOD.
+
+  METHOD get_subobject.
+    rv_subobject = me->mv_subobject.
+  ENDMETHOD.
+
+  METHOD get_external_number.
+    rv_number = me->mv_ext_number.
+  ENDMETHOD.
+
+  METHOD get_log_handle.
+    rv_handle = me->mv_log_handle.
+  ENDMETHOD.
+
+  METHOD add_free_log_message.
+    CALL FUNCTION 'BAL_LOG_MSG_ADD_FREE_TEXT'
+      EXPORTING
+        i_log_handle     = me->mv_log_handle
+        i_msgty          = iv_msgty
+        i_probclass      = iv_msgty
+        i_text           = iv_text
+      EXCEPTIONS
+        log_not_found    = 1
+        msg_inconsistent = 2
+        log_is_full      = 3
+        OTHERS           = 4.
+
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_success_message.
+    me->add_free_log_message( EXPORTING  iv_msgty         = me->mc_success
+                                         iv_probclass     = iv_probclass
+                                         iv_text          = iv_text
+                              EXCEPTIONS error_adding_log = 1
+                                         OTHERS           = 2 ).
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_warning_message.
+    me->add_free_log_message( EXPORTING  iv_msgty         = me->mc_warning
+                                         iv_probclass     = iv_probclass
+                                         iv_text          = iv_text
+                              EXCEPTIONS error_adding_log = 1
+                                         OTHERS           = 2 ).
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_information_message.
+    me->add_free_log_message( EXPORTING  iv_msgty         = me->mc_information
+                                         iv_probclass     = iv_probclass
+                                         iv_text          = iv_text
+                              EXCEPTIONS error_adding_log = 1
+                                         OTHERS           = 2 ).
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_error_message.
+    me->add_free_log_message( EXPORTING  iv_msgty         = me->mc_error
+                                         iv_probclass     = iv_probclass
+                                         iv_text          = iv_text
+                              EXCEPTIONS error_adding_log = 1
+                                         OTHERS           = 2 ).
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_abort_message.
+    me->add_free_log_message( EXPORTING  iv_msgty         = me->mc_abort
+                                         iv_probclass     = iv_probclass
+                                         iv_text          = iv_text
+                              EXCEPTIONS error_adding_log = 1
+                                         OTHERS           = 2 ).
+    IF sy-subrc <> 0.
+      RAISE error_adding_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD refresh_log.
+    DATA: lv_log_handle TYPE balloghndl.
+
+    lv_log_handle = me->get_log_handle( ).
+
+    CALL FUNCTION 'BAL_LOG_REFRESH'
+      EXPORTING
+        i_log_handle  = lv_log_handle
+      EXCEPTIONS
+        log_not_found = 1
+        OTHERS        = 2.
+
+    IF sy-subrc <> 0.
+      RAISE error_refreshing_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD display_log.
+    DATA: lt_handle_log TYPE bal_t_logh.
+
+    me->save_log( EXCEPTIONS error_saving_log = 1
+                             OTHERS           = 2 ).
+
+    IF sy-subrc <> 0.
+      RAISE error_saving_log.
+    ENDIF.
+
+    CALL FUNCTION 'BAL_DSP_LOG_DISPLAY'
+      EXCEPTIONS
+        profile_inconsistent = 1
+        internal_error       = 2
+        no_data_available    = 3
+        no_authority         = 4
+        OTHERS               = 5.
+    IF sy-subrc <> 0.
+      RAISE error_displaying_log.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD set_object.
+    DATA: lv_object TYPE balobj-object.
+
+    SELECT SINGLE object
+      INTO lv_object
+      FROM balobj
+      WHERE object = iv_object.
+
+    IF sy-subrc <> 0.
+      RAISE object_not_found.
+    ENDIF.
+
+    me->mv_object = lv_object.
+  ENDMETHOD.
+
+  METHOD set_subobject.
+    DATA: lv_subobject TYPE balsub-subobject.
+
+    SELECT SINGLE subobject
+      INTO lv_subobject
+      FROM balsub
+      WHERE object    = iv_object
+        AND subobject = iv_subobject.
+
+    IF sy-subrc <> 0.
+      RAISE subobject_not_found.
+    ENDIF.
+
+    me->mv_subobject = lv_subobject.
+  ENDMETHOD.
+
+  METHOD create_log_object.
+    DATA: ls_log_data TYPE bal_s_log.
+    DATA: lv_log_handle TYPE balloghndl.
+
+    ls_log_data-extnumber = me->mv_ext_number.
+    ls_log_data-object    = me->mv_object.
+    ls_log_data-subobject = me->mv_subobject.
+    ls_log_data-aldate    = sy-datum.
+    ls_log_data-altime    = sy-uzeit.
+    ls_log_data-aluser    = sy-uname.
+    ls_log_data-altcode   = sy-tcode.
+    ls_log_data-alprog    = sy-cprog.
+
+    CALL FUNCTION 'BAL_LOG_CREATE'
+      EXPORTING
+        i_s_log                 = ls_log_data
+      IMPORTING
+        e_log_handle            = lv_log_handle
+      EXCEPTIONS
+        log_header_inconsistent = 1
+        OTHERS                  = 2.
+
+    IF sy-subrc <> 0.
+      RAISE error_log_creation.
+    ENDIF.
+
+    me->mv_log_handle = lv_log_handle.
+  ENDMETHOD.
+
+  METHOD save_log.
+    DATA: lt_log_handle TYPE bal_t_logh.
+
+    INSERT me->mv_log_handle INTO TABLE lt_log_handle.
+
+    CALL FUNCTION 'BAL_DB_SAVE'
+      EXPORTING
+        i_t_log_handle   = lt_log_handle
+      EXCEPTIONS
+        log_not_found    = 1
+        save_not_allowed = 2
+        numbering_error  = 3
+        OTHERS           = 4.
+
+    IF sy-subrc <> 0.
+      RAISE error_saving_log.
+    ENDIF.
+  ENDMETHOD.
+ENDCLASS.
